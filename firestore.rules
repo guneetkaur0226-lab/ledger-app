@@ -1,0 +1,40 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{db}/documents {
+    function isOwner()  { return request.auth != null && request.auth.token.role == 'owner'; }
+    function isMember() { return request.auth != null && request.auth.token.role == 'member'; }
+    function pad(n)     { return (n < 10 ? '0' : '') + string(n); }
+    function today() {
+      let t = request.time + duration.value(330, 'm'); // IST = UTC+5:30
+      return string(t.year()) + '-' + pad(t.month()) + '-' + pad(t.day());
+    }
+    function memberAllowed(date) {
+      return isMember()
+        && date == today()
+        && get(/databases/$(db)/documents/users/$(request.auth.uid)).data.active == true
+        && !exists(/databases/$(db)/documents/attendance/$(today())/records/$(request.auth.uid));
+    }
+
+    // All writes go through the Next.js API (Admin SDK). Clients only read.
+    match /users/{uid} {
+      allow read: if isOwner() || (request.auth != null && request.auth.uid == uid);
+      allow write: if false;
+    }
+    match /attendance/{date}/records/{uid} {
+      allow read: if isOwner() || (request.auth != null && request.auth.uid == uid);
+      allow write: if false;
+    }
+    match /ledgers/{date} {
+      allow read: if isOwner() || memberAllowed(date);
+      allow write: if false;
+      match /transactions/{id} {
+        allow read: if isOwner() || memberAllowed(date);
+        allow write: if false;
+      }
+    }
+    // History filtering across dates: owner only
+    match /{path=**}/transactions/{id} {
+      allow read: if isOwner();
+    }
+  }
+}
