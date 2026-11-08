@@ -18,7 +18,7 @@ export function sums(items: any[]) {
   for (const t of items) t.type === 'IN' ? (i += t.amount) : (o += t.amount);
   return { in: i, out: o, net: i - o };
 }
-type V = { ok: true; data: any } | { ok: false; error: string };
+type V = { ok: boolean; error?: string; data?: any };
 export function validateTxn(b: any): V {
   const bad = (error: string): V => ({ ok: false, error });
   const particulars = String(b.particulars ?? '').trim();
