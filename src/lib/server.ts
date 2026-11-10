@@ -72,7 +72,7 @@ export async function notifyTxn(creatorUid: string, t: any, byName: string) {
   const res = await getMessaging(getAdmin()).sendEachForMulticast({
     tokens,
     notification: {
-      title: `${t.type} ${inr(t.amount)} · ${t.mode === 'ONLINE' ? t.onlineMethod : 'Cash'}`,
+      title: `${t.type} ${inr(t.amount)} · ${t.mode === 'ONLINE' ? 'Online' : 'Cash'}`,
       body: `${t.particulars} · by ${byName}`,
     },
     webpush: { fcmOptions: { link: '/' } },

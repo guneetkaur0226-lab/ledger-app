@@ -25,7 +25,13 @@ export const PATCH = handle(async (req) => {
 // Deletes the ledger and every transaction in it
 export const DELETE = handle(async (req) => {
   await getCtx(req, { owner: true });
-  const date = req.nextUrl.searchParams.get('date');
+  const sp = req.nextUrl.searchParams;
+  if (sp.get('all') === 'true') { // purge every ledger and transaction
+    if (sp.get('confirm') !== 'DELETE') throw new HttpError(400, 'Confirmation missing');
+    await adminDb.recursiveDelete(adminDb.collection('ledgers'));
+    return { ok: true };
+  }
+  const date = sp.get('date');
   if (!isDate(date)) throw new HttpError(400, 'Pick a valid date');
   await adminDb.recursiveDelete(adminDb.doc(`ledgers/${date}`));
   return { ok: true };

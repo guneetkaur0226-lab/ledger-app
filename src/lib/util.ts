@@ -1,4 +1,3 @@
-export const METHODS = ['PAYTM', 'UPI', 'NETBANKING'];
 export const todayIST = () => new Date(Date.now() + 330 * 60000).toISOString().slice(0, 10);
 export const shiftDays = (d: string, n: number) =>
   new Date(new Date(d + 'T00:00:00Z').getTime() + n * 86400000).toISOString().slice(0, 10);
@@ -33,19 +32,16 @@ export function validateTxn(b: any): V {
   if (!Number.isInteger(b.amount) || b.amount <= 0 || b.amount > 1e11) return bad('Enter an amount greater than 0');
   if (!['IN', 'OUT'].includes(b.type)) return bad('Choose IN or OUT');
   if (!['CASH', 'ONLINE'].includes(b.mode)) return bad('Choose Cash or Online');
-  if (b.mode === 'ONLINE') {
-    if (b.type !== 'IN') return bad('Online payments can only be received (IN)');
-    if (!METHODS.includes(b.onlineMethod)) return bad('Choose PayTM, UPI or NetBanking');
-  }
+  if (b.mode === 'ONLINE' && b.type !== 'IN') return bad('Online payments can only be received (IN)');
   return {
     ok: true,
-    data: { date: b.date, particulars, amount: b.amount, type: b.type, mode: b.mode, onlineMethod: b.mode === 'ONLINE' ? b.onlineMethod : null },
+    data: { date: b.date, particulars, amount: b.amount, type: b.type, mode: b.mode },
   };
 }
 export function downloadCsv(name: string, items: any[]) {
-  const head = ['Date', 'Particulars', 'Type', 'Mode', 'Method', 'Amount (INR)', 'Added by'];
+  const head = ['Date', 'Particulars', 'Type', 'Mode', 'Amount (INR)', 'Added by'];
   const esc = (v: any) => `"${String(v ?? '').replace(/"/g, '""')}"`;
-  const rows = items.map((t) => [t.date, t.particulars, t.type, t.mode, t.onlineMethod || '', (t.amount / 100).toFixed(2), t.createdByName]);
+  const rows = items.map((t) => [t.date, t.particulars, t.type, t.mode === 'ONLINE' ? 'Online' : 'Cash', (t.amount / 100).toFixed(2), t.createdByName]);
   const csv = [head, ...rows].map((r) => r.map(esc).join(',')).join('\n');
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob(['\ufeff' + csv], { type: 'text/csv' }));
@@ -56,7 +52,7 @@ export function downloadCsv(name: string, items: any[]) {
 
 export function ledgerText(date: string, items: any[]) {
   const t = sums(items);
-  const lines = items.map((x) => `${x.type === 'IN' ? '+' : '-'}${inr(x.amount)} · ${x.particulars} (${x.mode === 'ONLINE' ? x.onlineMethod : 'Cash'})`);
+  const lines = items.map((x) => `${x.type === 'IN' ? '+' : '-'}${inr(x.amount)} · ${x.particulars} (${x.mode === 'ONLINE' ? 'Online' : 'Cash'})`);
   return [`Daily Ledger · ${fmtDate(date)}`, `In ${inr(t.in)} | Out ${inr(t.out)} | Net ${inr(t.net)}`, '', ...lines].join('\n');
 }
 // Owner only: system share sheet if the device has one, otherwise a WhatsApp link.

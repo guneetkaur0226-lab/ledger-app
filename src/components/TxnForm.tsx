@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { api } from '@/lib/api';
-import { METHODS, validateTxn } from '@/lib/util';
+import { validateTxn } from '@/lib/util';
 
 export default function TxnForm({ owner, today, initial, onClose }: { owner: boolean; today: string; initial?: any; onClose: () => void }) {
   const editing = !!initial;
@@ -10,13 +10,12 @@ export default function TxnForm({ owner, today, initial, onClose }: { owner: boo
   const [rupees, setR] = useState(initial ? String(initial.amount / 100) : '');
   const [type, setType] = useState<'IN' | 'OUT'>(initial?.type ?? 'IN');
   const [mode, setMode] = useState<'CASH' | 'ONLINE'>(initial?.mode ?? 'CASH');
-  const [method, setMethod] = useState(initial?.onlineMethod ?? 'UPI');
   const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    const body = { date, particulars, amount: Math.round(parseFloat(rupees) * 100), type, mode, onlineMethod: mode === 'ONLINE' ? method : null };
+    const body = { date, particulars, amount: Math.round(parseFloat(rupees) * 100), type, mode };
     const v = validateTxn(body);
     if (!v.ok) return setErr(v.error);
     setBusy(true); setErr('');
@@ -42,11 +41,6 @@ export default function TxnForm({ owner, today, initial, onClose }: { owner: boo
           <button type="button" className={mode === 'CASH' ? 'on' : ''} onClick={() => setMode('CASH')}>Cash</button>
           <button type="button" className={mode === 'ONLINE' ? 'on' : ''} disabled={type === 'OUT'} onClick={() => { setMode('ONLINE'); setType('IN'); }}>Online</button>
         </div>
-        {mode === 'ONLINE' && (
-          <div className="seg">
-            {METHODS.map((m) => <button type="button" key={m} className={method === m ? 'on' : ''} onClick={() => setMethod(m)}>{m === 'NETBANKING' ? 'NetBanking' : m === 'PAYTM' ? 'PayTM' : 'UPI'}</button>)}
-          </div>
-        )}
         <small className="hint">Online payments can only be received (IN).</small>
         {err && <p className="err">{err}</p>}
         <div className="row-gap">

@@ -48,7 +48,7 @@ function Shell() {
           <small>{profile.name} · {fmtDate(today)}</small>
         </div>
         <div className="row-gap">
-          <button className="ghost" onClick={async () => setMsg(await enablePush().catch((e) => e.message))}>Alerts</button>
+          {owner && <button className="ghost" onClick={async () => setMsg(await enablePush().catch((e) => e.message))}>Alerts</button>}
           <button className="ghost" onClick={() => signOut(auth)}>Sign out</button>
         </div>
       </header>

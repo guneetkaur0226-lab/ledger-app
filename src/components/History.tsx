@@ -38,6 +38,12 @@ export default function History() {
   const dates = Array.from(new Set([...shown.map((t) => t.date), ...(isFiltered(f) ? [] : Object.keys(ledgers))])).sort().reverse();
   const act = async (fn: () => Promise<any>) => { try { await fn(); await run(); } catch (e: any) { alert(e.message); } };
 
+  async function purgeAll() {
+    if (!confirm('This permanently deletes EVERY ledger and transaction. It cannot be undone.')) return;
+    if (prompt('Type DELETE to confirm') !== 'DELETE') return;
+    await act(() => api('DELETE', '/api/ledgers?all=true&confirm=DELETE'));
+  }
+
   return (
     <>
       <section className="filters noprint">
@@ -75,6 +81,10 @@ export default function History() {
           </section>
         );
       })}
+      <section className="danger noprint">
+        <small>Danger zone</small>
+        <button onClick={purgeAll}>Delete all ledger history</button>
+      </section>
       {form && <TxnForm owner today={today} initial={form.id ? form : undefined} onClose={() => { setForm(null); run(); }} />}
     </>
   );
