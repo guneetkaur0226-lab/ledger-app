@@ -19,6 +19,8 @@ export default function History() {
   const [form, setForm] = useState<any>(null);
   const [newDate, setNewDate] = useState(today);
   const [busy, setBusy] = useState(false);
+  const [open, setOpen] = useState<Set<string>>(new Set());
+  const toggle = (d: string) => setOpen((prev) => { const n = new Set(prev); n.has(d) ? n.delete(d) : n.add(d); return n; });
 
   async function run() {
     setBusy(true);
@@ -65,12 +67,24 @@ export default function History() {
       {dates.map((d) => {
         const rows = shown.filter((t) => t.date === d);
         const s = sums(rows);
+        const c = sums(rows.filter((t) => t.mode !== 'ONLINE'));
+        const o = sums(rows.filter((t) => t.mode === 'ONLINE'));
+        const isOpen = open.has(d);
         return (
-          <section key={d} className="day">
-            <header>
-              <div><b>{fmtDate(d)}</b>{ledgers[d]?.title && <small> · {ledgers[d].title}</small>}</div>
-              <span className="tot"><span className="in">{inr(s.in)}</span> / <span className="out">{inr(s.out)}</span> = <b>{inr(s.net)}</b></span>
-            </header>
+          <section key={d} className={'day' + (isOpen ? ' open' : '')}>
+            <button className="dayhead" onClick={() => toggle(d)} aria-expanded={isOpen}>
+              <span><b>{fmtDate(d)}</b>{ledgers[d]?.title && <small>{ledgers[d].title}</small>}</span>
+              <span className="dh-tot">
+                <span><span className="in">{inr(s.in)}</span> − <span className="out">{inr(s.out)}</span> = <b>{inr(s.net)}</b></span>
+                <small>
+                  {f.mode !== 'ONLINE' && <>Net cash {inr(c.net)}</>}
+                  {f.mode === '' && ' · '}
+                  {f.mode !== 'CASH' && <>Net online {inr(o.net)}</>}
+                </small>
+              </span>
+              <span className="chev" aria-hidden>{isOpen ? '▴' : '▾'}</span>
+            </button>
+            <div className="day-body">
             <div className="acts noprint">
               <button onClick={() => shareText(ledgerText(d, rows))}>Share</button>
               <button onClick={() => { const title = prompt('Ledger title', ledgers[d]?.title ?? ''); if (title !== null) act(() => api('PATCH', '/api/ledgers', { date: d, title, notes: ledgers[d]?.notes ?? '' })); }}>Rename</button>
@@ -78,6 +92,7 @@ export default function History() {
             </div>
             <TxnList items={rows} owner show={f.mode} onEdit={(t) => setForm(t)}
               onDelete={(t) => { if (confirm(`Delete "${t.particulars}"?`)) act(() => api('DELETE', `/api/transactions?date=${t.date}&id=${t.id}`)); }} />
+            </div>
           </section>
         );
       })}

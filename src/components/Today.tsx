@@ -29,7 +29,7 @@ export default function Today() {
   };
   return (
     <>
-      <Summary items={shown} />
+      <Summary items={shown} show={f.mode} />
       {isFiltered(f) && <p className="note">Totals cover the filtered rows only.</p>}
       <Filters f={f} set={setF} />
       <TxnList items={shown} owner={owner} show={f.mode} onEdit={(t) => setForm(t)} onDelete={del} />
