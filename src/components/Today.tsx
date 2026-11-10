@@ -32,7 +32,7 @@ export default function Today() {
       <Summary items={shown} />
       {isFiltered(f) && <p className="note">Totals cover the filtered rows only.</p>}
       <Filters f={f} set={setF} />
-      <TxnList items={shown} owner={owner} onEdit={(t) => setForm(t)} onDelete={del} />
+      <TxnList items={shown} owner={owner} show={f.mode} onEdit={(t) => setForm(t)} onDelete={del} />
       {owner && (
         <div className="row-gap noprint">
           <button className="ghost" onClick={() => shareText(ledgerText(today, shown))} disabled={!shown.length}>Share</button>

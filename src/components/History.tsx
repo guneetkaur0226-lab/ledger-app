@@ -76,7 +76,7 @@ export default function History() {
               <button onClick={() => { const title = prompt('Ledger title', ledgers[d]?.title ?? ''); if (title !== null) act(() => api('PATCH', '/api/ledgers', { date: d, title, notes: ledgers[d]?.notes ?? '' })); }}>Rename</button>
               <button onClick={() => { if (confirm(`Delete the ledger for ${fmtDate(d)} and all ${txns.filter((t) => t.date === d).length} transactions?`)) act(() => api('DELETE', `/api/ledgers?date=${d}`)); }}>Delete ledger</button>
             </div>
-            <TxnList items={rows} owner onEdit={(t) => setForm(t)}
+            <TxnList items={rows} owner show={f.mode} onEdit={(t) => setForm(t)}
               onDelete={(t) => { if (confirm(`Delete "${t.particulars}"?`)) act(() => api('DELETE', `/api/transactions?date=${t.date}&id=${t.id}`)); }} />
           </section>
         );

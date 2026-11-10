@@ -74,3 +74,10 @@ background-image:repeating-linear-gradient(transparent 0 55px,#E3E9F4 55px 56px)
 .tbl tfoot td{background:#F6F8FC;font-weight:700;border-top:2px solid var(--ink)}
 .danger{display:flex;flex-direction:column;gap:6px;align-items:flex-start;border-top:1px solid var(--rule);padding-top:14px;margin-top:6px}
 .danger button{background:none;color:var(--out);border:1px solid var(--out);border-radius:8px;padding:8px 14px;font-weight:600}
+/* modal: never squash the form rows; scroll the sheet instead */
+.sheet>*{flex-shrink:0}
+.seg button{min-height:44px;line-height:1.2}
+.tbl td:first-child{min-width:110px}
+.tbl th.c,.tbl td.c{padding-left:8px;padding-right:8px}
+.tbl td.c{font-size:.85rem}
+.tbl tfoot tr+tr td{border-top:1px solid var(--rule)}
