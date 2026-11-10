@@ -7,6 +7,7 @@ export async function api<T = any>(method: string, path: string, body?: any): Pr
     body: body ? JSON.stringify(body) : undefined,
   });
   const data = await res.json().catch(() => ({}));
+  if (res.status === 401) auth.signOut();
   if (!res.ok) throw new Error(data.error || 'Request failed');
   return data;
 }

@@ -1,42 +1,43 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { collection, onSnapshot, query, where } from 'firebase/firestore';
+import { collection, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { api } from '@/lib/api';
 
 export default function Members() {
   const [members, setMembers] = useState<any[]>([]);
   const [name, setName] = useState('');
-  const [loginId, setLoginId] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState('');
   const [err, setErr] = useState('');
-  useEffect(() => onSnapshot(query(collection(db, 'users'), where('role', '==', 'member')),
-    (s) => setMembers(s.docs.map((d) => ({ uid: d.id, ...d.data() })))), []);
+  useEffect(() => onSnapshot(collection(db, 'members'),
+    (s) => setMembers(s.docs.map((d) => ({ key: d.id, ...d.data() })).sort((a: any, b: any) => a.name.localeCompare(b.name)))), []);
 
-  async function create(e: React.FormEvent) {
+  async function add(e: React.FormEvent) {
     e.preventDefault(); setErr('');
-    try { await api('POST', '/api/members', { name, loginId, password }); setName(''); setLoginId(''); setPassword(''); }
+    try { await api('POST', '/api/members', { name, email }); setName(''); setEmail(''); }
     catch (x: any) { setErr(x.message); }
   }
-  const patch = (body: any) => api('PATCH', '/api/members', body).catch((e) => alert(e.message));
+  const run = (fn: () => Promise<any>) => fn().catch((e) => alert(e.message));
   return (
     <>
-      <form className="card" onSubmit={create}>
-        <h2>Add member</h2>
+      <form className="card" onSubmit={add}>
+        <h2>Allow a member</h2>
+        <small>They sign in with this Google email. Nobody else can get in.</small>
         <label>Name<input value={name} onChange={(e) => setName(e.target.value)} required /></label>
-        <label>Login ID<input value={loginId} onChange={(e) => setLoginId(e.target.value)} autoCapitalize="none" required /></label>
-        <label>Password (6+ characters)<input value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} /></label>
+        <label>Google email<input type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoCapitalize="none" required /></label>
         {err && <p className="err">{err}</p>}
-        <button className="btn">Create member</button>
+        <button className="btn">Add member</button>
       </form>
+      {!members.length && <p className="empty">No members yet.</p>}
       <ul className="rows">
         {members.map((m) => (
-          <li key={m.uid}>
+          <li key={m.key}>
             <div className="grow">
-              <b>{m.name}</b><small>{m.loginId} · {m.active ? 'Active' : 'Disabled'}</small>
+              <b>{m.name}</b>
+              <small>{m.email} · {!m.active ? 'Paused' : m.uid ? 'Signed in before' : 'Not signed in yet'}</small>
               <span className="acts">
-                <button onClick={() => patch({ uid: m.uid, active: !m.active })}>{m.active ? 'Disable' : 'Enable'}</button>
-                <button onClick={() => { const p = prompt('New password (6+ characters)'); if (p) patch({ uid: m.uid, password: p }); }}>Reset password</button>
+                <button onClick={() => run(() => api('PATCH', '/api/members', { key: m.key, active: !m.active }))}>{m.active ? 'Pause access' : 'Restore access'}</button>
+                <button onClick={() => { if (confirm(`Remove ${m.name}'s access? They will be signed out and must be added again to return.`)) run(() => api('DELETE', `/api/members?key=${encodeURIComponent(m.key)}`)); }}>Remove</button>
               </span>
             </div>
           </li>

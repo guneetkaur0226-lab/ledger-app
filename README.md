@@ -1,38 +1,52 @@
 # Daily Ledger
 
-Next.js (PWA) on Vercel · Firebase Auth + Firestore + FCM · packaged as an internal APK.
+Next.js web app (installable on phones) on Vercel + Firebase (Auth, Firestore, FCM).
 
-Reads are real-time (Firestore listeners, locked down by `firestore.rules`). Every write goes through the
-Next.js API routes (`src/app/api`) using the Admin SDK, which enforce roles, "today only" for members,
-the Online ⇒ IN rule, attendance lockout, auto-creating the day's ledger, and push notifications.
+- Sign-in is **Google only**. The owner is always `bakshistock@gmail.com`. Members can sign in only if the owner has added their Google email (Members tab). The owner can pause or remove a member any time.
+- Reads are real-time (Firestore, locked by `firestore.rules`). All writes go through the API routes in `src/app/api`.
+- Members: today's ledger only, add/read, no export/share, screen cover + watermark deterrents (see limits).
+- Owner: everything, history, export, share to WhatsApp, no restrictions.
 
-## 1. Firebase (once)
-1. Create a project; set Firestore location to **asia-south1** (cannot be changed later).
-2. Enable Authentication > Email/Password.
-3. Add a Web app; copy its config into `.env.local` (see `.env.example`).
-4. Project settings > Cloud Messaging > Web Push certificates > generate key pair; copy into `NEXT_PUBLIC_FIREBASE_VAPID_KEY`.
-5. Project settings > Service accounts > generate a key. Paste the JSON as one line into `FIREBASE_SERVICE_ACCOUNT_JSON`.
-6. Deploy rules and indexes: `npx firebase-tools deploy --only firestore`.
+## A. Firebase setup (about 15 minutes)
 
-## 2. Run locally
-```
-npm install
-cp .env.example .env.local   # fill in values
-npm run seed                 # creates the Owner (OWNER_LOGIN / OWNER_PASSWORD)
-npm run dev
-```
-Sign in as the owner, then add members in the Members tab.
+1. Go to https://console.firebase.google.com > **Add project** (name it e.g. `daily-ledger`; Analytics not needed).
+2. **Firestore database**: Build > Firestore Database > Create database > location **asia-south1 (Mumbai)** (cannot be changed later) > **Production mode** > Enable.
+3. **Rules**: Firestore > Rules tab > replace everything with the contents of `firestore.rules` > Publish.
+4. **Index**: Firestore > Indexes > **Single field** > Add exemption: Collection ID `transactions`, Field path `date`, then enable **Ascending** and **Descending** for both *Collection* and *Collection group* scopes > Save. (Needed for the History tab.)
+5. **Google sign-in**: Build > Authentication > Get started > Sign-in method > **Google** > Enable, pick a support email > Save.
+6. **Web app**: Project settings (gear) > General > Your apps > **</>** (Web) > register (no hosting). Copy `apiKey`, `authDomain`, `projectId`, `messagingSenderId`, `appId`.
+7. **Push key**: Project settings > Cloud Messaging > **Web Push certificates** > Generate key pair. Copy the key (this is the VAPID key).
+8. **Service account**: Project settings > Service accounts > **Generate new private key** > download the JSON. Keep it secret; never commit it.
 
-## 3. Deploy on Vercel
-Import the repo, add every variable from `.env.example` (except the OWNER_* ones) under Project > Settings > Environment Variables, deploy.
-Add the Vercel domain under Firebase > Authentication > Settings > Authorized domains.
+## B. Vercel environment variables
 
-## 4. Internal APK
-Use PWABuilder.com (enter the Vercel URL > Android > generate) or Bubblewrap. This wraps the site as a Trusted Web Activity.
-Host the generated `assetlinks.json` at `public/.well-known/assetlinks.json` so the app opens full screen.
+Vercel > your project > Settings > Environment Variables. Add each one for **Production, Preview and Development**:
 
-## Notes
-- Money is stored as integer paise. "Today" is always computed in IST.
-- Login IDs without "@" are stored as `<id>@ledger.invalid` in Firebase Auth. No email is ever sent.
-- Members absent today are rejected by the API and the rules, and skipped for notifications.
-- History queries run across all ledgers via a collection-group index on `date` (in `firestore.indexes.json`).
+| Name | Value |
+|---|---|
+| `NEXT_PUBLIC_FIREBASE_API_KEY` | `apiKey` from step 6 |
+| `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN` | `authDomain` from step 6 |
+| `NEXT_PUBLIC_FIREBASE_PROJECT_ID` | `projectId` from step 6 |
+| `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID` | `messagingSenderId` from step 6 |
+| `NEXT_PUBLIC_FIREBASE_APP_ID` | `appId` from step 6 |
+| `NEXT_PUBLIC_FIREBASE_VAPID_KEY` | key from step 7 |
+| `FIREBASE_SERVICE_ACCOUNT_JSON` | the whole contents of the JSON file from step 8 |
+
+Then **Deployments > Redeploy** (variables only apply to new builds).
+
+After the first deploy, add your Vercel domain (e.g. `your-app.vercel.app`) in Firebase > Authentication > Settings > **Authorized domains**.
+
+## C. First sign-in
+
+Open the Vercel URL and sign in with `bakshistock@gmail.com`. The owner account is created automatically. Then add members in **Members** by their Google email.
+
+## D. Put it on phones
+
+Open the Vercel URL in Chrome on Android > menu > **Add to Home screen / Install app**. For a sideloadable APK of the same site, paste the URL into pwabuilder.com > Android.
+
+## Limits to know
+- **No web app can block the phone's screenshot or screen-recording button.** For anyone who is not the owner, the app instead:
+  covers the screen when the page loses focus or a PrintScreen/print/save key is pressed, stamps their name and email across the screen,
+  and disables copy, right-click and printing. Photos from another phone and some screenshots cannot be stopped; the watermark makes any leak traceable.
+- True blocking needs a native Android shell (Android's FLAG_SECURE). Ask if you want that later.
+- Export CSV / Print / Share are owner-only buttons in the app.

@@ -1,36 +1,53 @@
 import { FieldValue } from 'firebase-admin/firestore';
 import { adminAuth, adminDb, getCtx, handle, HttpError } from '@/lib/server';
-import { toEmail } from '@/lib/util';
+import { isEmail, normEmail, OWNER_EMAIL } from '@/lib/util';
 
+// Owner adds a Google email to the allow-list
 export const POST = handle(async (req) => {
   const ctx = await getCtx(req, { owner: true });
-  const { name, loginId, password } = await req.json();
-  if (!String(name ?? '').trim() || !String(loginId ?? '').trim()) throw new HttpError(400, 'Enter a name and login ID');
-  if (String(password ?? '').length < 6) throw new HttpError(400, 'Password must be at least 6 characters');
-  const user = await adminAuth
-    .createUser({ email: toEmail(loginId), password, displayName: name.trim() })
-    .catch((e) => { throw new HttpError(e.code === 'auth/email-already-exists' ? 409 : 400, e.code === 'auth/email-already-exists' ? 'That login ID is taken' : 'Could not create the member'); });
-  await adminAuth.setCustomUserClaims(user.uid, { role: 'member' });
-  await adminDb.doc(`users/${user.uid}`).set({
-    name: name.trim(), loginId: loginId.trim().toLowerCase(), role: 'member', active: true, createdBy: ctx.uid, createdAt: FieldValue.serverTimestamp(),
-  });
-  return { uid: user.uid };
+  const b = await req.json();
+  const email = String(b.email ?? '').trim().toLowerCase();
+  if (!isEmail(email)) throw new HttpError(400, 'Enter a valid Google email');
+  const key = normEmail(email);
+  if (key === normEmail(OWNER_EMAIL)) throw new HttpError(400, 'That is the owner account');
+  const ref = adminDb.doc(`members/${key}`);
+  if ((await ref.get()).exists) throw new HttpError(409, 'This email is already added');
+  await ref.set({ email, name: String(b.name ?? '').trim() || email, active: true, addedBy: ctx.uid, addedAt: FieldValue.serverTimestamp() });
+  return { key };
 });
 
-// Activate/deactivate and/or reset password
+// Pause or resume a member, or rename them
 export const PATCH = handle(async (req) => {
   await getCtx(req, { owner: true });
-  const { uid, active, password } = await req.json();
-  const snap = await adminDb.doc(`users/${uid}`).get();
-  if (snap.data()?.role !== 'member') throw new HttpError(400, 'Not a member');
-  if (typeof active === 'boolean') {
-    await adminAuth.updateUser(uid, { disabled: !active });
-    await adminDb.doc(`users/${uid}`).update({ active });
-    if (!active) await adminAuth.revokeRefreshTokens(uid);
+  const b = await req.json();
+  const ref = adminDb.doc(`members/${b.key}`);
+  const m = await ref.get();
+  if (!m.exists) throw new HttpError(404, 'Member not found');
+  const upd: any = {};
+  if (typeof b.active === 'boolean') upd.active = b.active;
+  if (typeof b.name === 'string' && b.name.trim()) upd.name = b.name.trim();
+  await ref.update(upd);
+  const uid = m.data()!.uid;
+  if (uid && typeof b.active === 'boolean') {
+    await adminDb.doc(`users/${uid}`).set({ active: b.active }, { merge: true });
+    if (!b.active) await adminAuth.revokeRefreshTokens(uid);
   }
-  if (password) {
-    if (String(password).length < 6) throw new HttpError(400, 'Password must be at least 6 characters');
-    await adminAuth.updateUser(uid, { password });
+  return { ok: true };
+});
+
+// Remove access completely: allow-list entry, sign-in account and devices
+export const DELETE = handle(async (req) => {
+  await getCtx(req, { owner: true });
+  const key = req.nextUrl.searchParams.get('key');
+  if (!key) throw new HttpError(400, 'Missing member');
+  const ref = adminDb.doc(`members/${key}`);
+  const m = await ref.get();
+  if (!m.exists) throw new HttpError(404, 'Member not found');
+  const uid = m.data()!.uid;
+  await ref.delete(); // from this moment the rules and the API refuse them
+  if (uid) {
+    await adminAuth.deleteUser(uid).catch(() => {});
+    await adminDb.recursiveDelete(adminDb.doc(`users/${uid}`));
   }
   return { ok: true };
 });

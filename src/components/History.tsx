@@ -4,7 +4,7 @@ import { collection, collectionGroup, getDocs, orderBy, query, where } from 'fir
 import { db } from '@/lib/firebase';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
-import { downloadCsv, fmtDate, inr, shiftDays, sums } from '@/lib/util';
+import { downloadCsv, fmtDate, inr, ledgerText, shareText, shiftDays, sums } from '@/lib/util';
 import TxnList from './TxnList';
 import TxnForm from './TxnForm';
 import Filters, { applyFilters, isFiltered, noFilter } from './Filters';
@@ -66,6 +66,7 @@ export default function History() {
               <span className="tot"><span className="in">{inr(s.in)}</span> / <span className="out">{inr(s.out)}</span> = <b>{inr(s.net)}</b></span>
             </header>
             <div className="acts noprint">
+              <button onClick={() => shareText(ledgerText(d, rows))}>Share</button>
               <button onClick={() => { const title = prompt('Ledger title', ledgers[d]?.title ?? ''); if (title !== null) act(() => api('PATCH', '/api/ledgers', { date: d, title, notes: ledgers[d]?.notes ?? '' })); }}>Rename</button>
               <button onClick={() => { if (confirm(`Delete the ledger for ${fmtDate(d)} and all ${txns.filter((t) => t.date === d).length} transactions?`)) act(() => api('DELETE', `/api/ledgers?date=${d}`)); }}>Delete ledger</button>
             </div>

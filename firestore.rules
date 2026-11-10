@@ -1,8 +1,9 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{db}/documents {
+    // role / mk (member key) are custom claims stamped by /api/session after the Google sign-in allow-list check.
     function isOwner()  { return request.auth != null && request.auth.token.role == 'owner'; }
-    function isMember() { return request.auth != null && request.auth.token.role == 'member'; }
+    function isMember() { return request.auth != null && request.auth.token.role == 'member' && request.auth.token.mk is string; }
     function pad(n)     { return (n < 10 ? '0' : '') + string(n); }
     function today() {
       let t = request.time + duration.value(330, 'm'); // IST = UTC+5:30
@@ -11,17 +12,21 @@ service cloud.firestore {
     function memberAllowed(date) {
       return isMember()
         && date == today()
-        && get(/databases/$(db)/documents/users/$(request.auth.uid)).data.active == true
-        && !exists(/databases/$(db)/documents/attendance/$(today())/records/$(request.auth.uid));
+        && get(/databases/$(db)/documents/members/$(request.auth.token.mk)).data.active == true
+        && !exists(/databases/$(db)/documents/attendance/$(today())/records/$(request.auth.token.mk));
     }
 
     // All writes go through the Next.js API (Admin SDK). Clients only read.
+    match /members/{key} {
+      allow read: if isOwner();
+      allow write: if false;
+    }
     match /users/{uid} {
       allow read: if isOwner() || (request.auth != null && request.auth.uid == uid);
       allow write: if false;
     }
-    match /attendance/{date}/records/{uid} {
-      allow read: if isOwner() || (request.auth != null && request.auth.uid == uid);
+    match /attendance/{date}/records/{key} {
+      allow read: if isOwner() || (isMember() && request.auth.token.mk == key);
       allow write: if false;
     }
     match /ledgers/{date} {

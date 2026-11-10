@@ -58,3 +58,9 @@ background-image:repeating-linear-gradient(transparent 0 55px,#E3E9F4 55px 56px)
 @keyframes up{from{transform:translateY(24px);opacity:0}}
 @media (prefers-reduced-motion:reduce){.sheet{animation:none}}
 @media print{.noprint,.tabs,.fab,.top{display:none!important}body{background:#fff}.rows{background-image:none}.shell{padding:0;max-width:none}}
+.member,.member *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.member input{-webkit-user-select:text;user-select:text}
+@media print{.member .shell{display:none!important}}
+.wm{position:fixed;inset:0;z-index:50;pointer-events:none}
+.cover{position:fixed;inset:0;z-index:60;background:var(--ink);color:#fff;display:flex;align-items:center;justify-content:center;text-align:center;padding:24px;font:600 1.1rem var(--display)}
+.google{display:flex;align-items:center;justify-content:center;padding:13px 18px;font-size:1rem}

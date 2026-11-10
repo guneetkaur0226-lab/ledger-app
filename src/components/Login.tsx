@@ -1,28 +1,25 @@
 'use client';
 import { useState } from 'react';
-import { signInWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
-import { toEmail } from '@/lib/util';
+import { useAuth } from '@/lib/auth';
+import { googleSignIn } from '@/lib/native';
 
 export default function Login() {
-  const [id, setId] = useState('');
-  const [pw, setPw] = useState('');
+  const { accessError, clearError } = useAuth();
   const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
-    setBusy(true); setErr('');
-    try { await signInWithEmailAndPassword(auth, toEmail(id), pw); }
-    catch { setErr('Login ID or password is wrong.'); }
+  async function go() {
+    setBusy(true); setErr(''); clearError();
+    try { await googleSignIn(); }
+    catch (e: any) { if (!/cancel|closed|dismiss/i.test(String(e?.code || e?.message))) setErr('Google sign-in failed. Try again.'); }
     finally { setBusy(false); }
   }
   return (
-    <form className="center login" onSubmit={submit}>
-      <h1>Daily Ledger</h1>
-      <label>Login ID<input value={id} onChange={(e) => setId(e.target.value)} autoCapitalize="none" autoComplete="username" required /></label>
-      <label>Password<input type="password" value={pw} onChange={(e) => setPw(e.target.value)} autoComplete="current-password" required /></label>
-      {err && <p className="err">{err}</p>}
-      <button className="btn" disabled={busy}>{busy ? 'Signing in…' : 'Sign in'}</button>
-    </form>
+    <div className="center login">
+      <img src="/icon-192.png" alt="" width={84} height={84} style={{ borderRadius: 20, alignSelf: 'center' }} />
+      <h1 style={{ textAlign: 'center' }}>Daily Ledger</h1>
+      <button className="btn google" onClick={go} disabled={busy}>{busy ? 'Opening Google…' : 'Sign in with Google'}</button>
+      {(accessError || err) && <p className="err">{accessError || err}</p>}
+      <small>Only accounts approved by the owner can sign in.</small>
+    </div>
   );
 }
