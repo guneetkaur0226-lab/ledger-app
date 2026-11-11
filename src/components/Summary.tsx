@@ -6,7 +6,7 @@ const Cell = ({ label, value, cls = '', fin = false }: { label: string; value: s
 const out = (p: number) => (p ? '−' + inr(p) : inr(0));
 const sign = (n: number) => (n < 0 ? 'out' : '');
 
-// Cash In / Cash Out, Net Cash / Net Online, Final Balance.
+// Row 1: Cash In | Net Cash. Row 2: Cash Out | Net Online. Row 3: Final Balance.
 // show = the Cash/Online filter; it hides what no longer applies. compact = no card, for the History date rows.
 export default function Summary({ items, show = '', compact = false }: { items: any[]; show?: string; compact?: boolean }) {
   const all = sums(items);
@@ -15,8 +15,8 @@ export default function Summary({ items, show = '', compact = false }: { items: 
   return (
     <section className={'sum' + (compact ? ' compact' : '')}>
       {show !== 'ONLINE' && <Cell label="Cash In" value={inr(cash.in)} cls="in" />}
-      {show !== 'ONLINE' && <Cell label="Cash Out" value={out(cash.out)} cls="out" />}
       {show !== 'ONLINE' && <Cell label="Net Cash" value={inr(cash.net)} cls={sign(cash.net)} />}
+      {show !== 'ONLINE' && <Cell label="Cash Out" value={out(cash.out)} cls="out" />}
       {show !== 'CASH' && <Cell label="Net Online" value={inr(online.net)} cls={sign(online.net)} />}
       <Cell label="Final Balance" value={inr(all.net)} cls={sign(all.net)} fin />
     </section>
