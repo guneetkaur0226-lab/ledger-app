@@ -5,6 +5,7 @@ import { db } from '@/lib/firebase';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { downloadCsv, fmtDate, inr, ledgerText, shareText, shiftDays, sums } from '@/lib/util';
+import Summary from './Summary';
 import TxnList from './TxnList';
 import TxnForm from './TxnForm';
 import Filters, { applyFilters, isFiltered, noFilter } from './Filters';
@@ -66,24 +67,17 @@ export default function History() {
       {!dates.length && <p className="empty">No ledgers in this range.</p>}
       {dates.map((d) => {
         const rows = shown.filter((t) => t.date === d);
-        const s = sums(rows);
-        const c = sums(rows.filter((t) => t.mode !== 'ONLINE'));
-        const o = sums(rows.filter((t) => t.mode === 'ONLINE'));
         const isOpen = open.has(d);
         return (
           <section key={d} className={'day' + (isOpen ? ' open' : '')}>
-            <button className="dayhead" onClick={() => toggle(d)} aria-expanded={isOpen}>
-              <span><b>{fmtDate(d)}</b>{ledgers[d]?.title && <small>{ledgers[d].title}</small>}</span>
-              <span className="dh-tot">
-                <span><span className="in">{inr(s.in)}</span> − <span className="out">{inr(s.out)}</span> = <b>{inr(s.net)}</b></span>
-                <small>
-                  {f.mode !== 'ONLINE' && <>Net cash {inr(c.net)}</>}
-                  {f.mode === '' && ' · '}
-                  {f.mode !== 'CASH' && <>Net online {inr(o.net)}</>}
-                </small>
-              </span>
-              <span className="chev" aria-hidden>{isOpen ? '▴' : '▾'}</span>
-            </button>
+            <div className="dayhead" role="button" tabIndex={0} aria-expanded={isOpen} onClick={() => toggle(d)}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(d); } }}>
+              <div className="dh-top">
+                <span><b>{fmtDate(d)}</b>{ledgers[d]?.title && <small>{ledgers[d].title}</small>}</span>
+                <span className="chev" aria-hidden>{isOpen ? '▴' : '▾'}</span>
+              </div>
+              <Summary items={rows} show={f.mode} compact />
+            </div>
             <div className="day-body">
             <div className="acts noprint">
               <button onClick={() => shareText(ledgerText(d, rows))}>Share</button>

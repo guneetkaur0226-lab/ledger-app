@@ -1,17 +1,24 @@
 import { inr, sums } from '@/lib/util';
 
-// show = the Cash/Online filter: hides the net that no longer applies.
-export default function Summary({ items, show = '' }: { items: any[]; show?: string }) {
-  const s = sums(items);
+const Cell = ({ label, value, cls = '', fin = false }: { label: string; value: string; cls?: string; fin?: boolean }) => (
+  <div className={'cell' + (fin ? ' fin' : '')}><span>{label}</span><b className={cls}>{value}</b></div>
+);
+const out = (p: number) => (p ? '−' + inr(p) : inr(0));
+const sign = (n: number) => (n < 0 ? 'out' : '');
+
+// Cash In / Cash Out, Net Cash / Net Online, Final Balance.
+// show = the Cash/Online filter; it hides what no longer applies. compact = no card, for the History date rows.
+export default function Summary({ items, show = '', compact = false }: { items: any[]; show?: string; compact?: boolean }) {
+  const all = sums(items);
   const cash = sums(items.filter((t) => t.mode !== 'ONLINE'));
   const online = sums(items.filter((t) => t.mode === 'ONLINE'));
   return (
-    <section className="sum">
-      <div><small>In</small><b className="in">{inr(s.in)}</b></div>
-      <div><small>Out</small><b className="out">{inr(s.out)}</b></div>
-      <div className="net"><small>Net</small><b>{inr(s.net)}</b></div>
-      {show !== 'ONLINE' && <div className="sub"><small>Net cash</small><b className={cash.net < 0 ? 'out' : ''}>{inr(cash.net)}</b></div>}
-      {show !== 'CASH' && <div className="sub"><small>Net online</small><b className={online.net < 0 ? 'out' : ''}>{inr(online.net)}</b></div>}
+    <section className={'sum' + (compact ? ' compact' : '')}>
+      {show !== 'ONLINE' && <Cell label="Cash In" value={inr(cash.in)} cls="in" />}
+      {show !== 'ONLINE' && <Cell label="Cash Out" value={out(cash.out)} cls="out" />}
+      {show !== 'ONLINE' && <Cell label="Net Cash" value={inr(cash.net)} cls={sign(cash.net)} />}
+      {show !== 'CASH' && <Cell label="Net Online" value={inr(online.net)} cls={sign(online.net)} />}
+      <Cell label="Final Balance" value={inr(all.net)} cls={sign(all.net)} fin />
     </section>
   );
 }
