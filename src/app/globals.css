@@ -102,3 +102,8 @@ background-image:repeating-linear-gradient(transparent 0 55px,#E3E9F4 55px 56px)
 .sum.compact .fin b{font-size:1.2rem}
 .dayhead{flex-direction:column;align-items:stretch;gap:4px}
 .dh-top{display:flex;justify-content:space-between;align-items:center;gap:10px}
+/* header: keep Alerts + Sign out on one line on narrow phones */
+.top{gap:10px}
+.top>div:first-child{min-width:0;flex:1}
+.top .row-gap{flex-wrap:nowrap;flex-shrink:0;gap:6px}
+.top .ghost{padding:5px 10px;font-size:.85rem;white-space:nowrap}
